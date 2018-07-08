@@ -16,6 +16,9 @@ class ControllerAcceptor:
 public:
     ControllerAcceptor(std::shared_ptr<Controller> controller);
     void accept(std::byte const * ptr, uint32_t size) noexcept override;
+private:
+    std::shared_ptr<Controller> mController;
+    std::string mActualData;
 };
 
 
