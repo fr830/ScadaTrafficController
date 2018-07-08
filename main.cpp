@@ -12,7 +12,7 @@
 #include <STC/SnifferOptions.hpp>
 #include <STC/FilteredIPv4Acceptor.hpp>
 #include <STC/IPv4Header.hpp>
-#include <STC/TCPHeader.hpp>
+#include <STC/TCPAcceptor.hpp>
 
 #include <iphlpapi.h>
 
@@ -25,27 +25,12 @@ class MyAccepter:
 public:
     void accept(std::byte const * ptr, uint32_t size) noexcept override
     {
-        stc::network::TCPHeader const * tcp =
-                reinterpret_cast<stc::network::TCPHeader const *>(ptr);
-        std::cout << "Source port: " << ntohs(tcp->mSourcePort) << "\n";
-        std::cout << "Destination port: " << ntohs(tcp->mDestinationPort) << "\n";
-        std::cout << "Ack sn: " << ntohl(tcp->mAckSn) << '\n';
-        std::cout << "Seq nb: " << ntohl(tcp->mSeqNumber) << '\n';
-
-
-        std::cout << "[" << (tcp->mURG?"URG ":"");
-        std::cout << (tcp->mACK?"ACK ":"");
-        std::cout << (tcp->mPSH?"PSH ":"");
-        std::cout << (tcp->mRST?"RST ":"");
-        std::cout << (tcp->mSYN?"SYN ":"");
-        std::cout << (tcp->mFIN?"FIN ":"") << "]\n";
-
-        std::string data(((char*)tcp) + (tcp->mDataOffset) * 4, (char*)ptr + size);
-        std::cout << "Data:\n" << data << "\n";
-        std::cout << std::endl;
-
-
-
+        char const * data_begin = reinterpret_cast<char const *>(ptr);
+        char const * data_end = reinterpret_cast<char const *>(ptr) + size;
+        auto is_null = [](char b) { return !b; };
+        data_begin = std::find_if_not(data_begin, data_end, is_null);
+        data_end = std::find_if(data_begin, data_end, is_null);
+        (std::cout << "NEW PACKET: \n" << std::string(data_begin, data_end) << "\n\n").flush();
     }
 };
 
@@ -82,9 +67,11 @@ int main()
         std::cout << "catch" << std::endl;
     }*/
 
-    std::shared_ptr<MyAccepter> my_acceptor(std::make_shared<MyAccepter>());
+    std::shared_ptr<stc::network::Acceptor> my_acceptor(std::make_shared<MyAccepter>());
+    std::shared_ptr<stc::network::Acceptor> tcp_acceptor(std::make_shared<::stc::network::TCPAcceptor>(my_acceptor));
+
     std::vector<stc::network::FilterIPv4Options> ip_filter_list{
-        stc::network::FilterIPv4Options(my_acceptor, "192.168.0.111", stc::network::FilterIPv4Options::Protocol::TCP),
+        stc::network::FilterIPv4Options(tcp_acceptor, "192.168.0.111", stc::network::FilterIPv4Options::Protocol::TCP),
     };
 
     stc::network::SnifferOptions opt;

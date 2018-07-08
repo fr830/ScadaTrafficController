@@ -5,6 +5,8 @@
 #include <vector>
 #include <cstdint>
 #include <cstddef>
+#include <memory>
+#include <optional>
 
 namespace stc
 {
@@ -17,10 +19,13 @@ class TCPAcceptor:
         public Acceptor
 {
 public:
+    TCPAcceptor(std::shared_ptr<Acceptor> acceptor);
     void accept(std::byte const * ptr, uint32_t size) noexcept override;
 private:
-    TCPHeader mHeader;
+    void resetPacketData() noexcept;
     std::vector<std::byte> mData;
+    std::shared_ptr<Acceptor> mAcceptor;
+    std::optional<TCPHeader> mHeader;
 };
 
 
