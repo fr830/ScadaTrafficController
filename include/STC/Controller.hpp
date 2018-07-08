@@ -14,17 +14,19 @@ namespace stc
 class Controller
 {
 public:
+    using ActualData= std::vector<std::vector<std::string>>;
     Controller();
     ~Controller();
     void setActualDataString(std::string & actual_string) noexcept;
+    void getActualData(ActualData & out_data) noexcept;
 private:
     void waitAndSwapData() noexcept;
     void doWork() noexcept;
     std::chrono::steady_clock::time_point mTimeStamp;
     std::string mActualDataString;
     std::string mWorkedDataString;
-    std::vector<std::vector<std::string>> mData;
-    std::vector<std::vector<std::string>> mWorkedData;
+    ActualData mData;
+    ActualData mWorkedData;
     mutable std::mutex mDataStringMutex;
     mutable std::mutex mDataMutex;
     std::future<void> mWorkResult;
