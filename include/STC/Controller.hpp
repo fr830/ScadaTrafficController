@@ -19,6 +19,7 @@ public:
     ~Controller();
     void setActualDataString(std::string & actual_string) noexcept;
     void getActualData(ActualData & out_data) noexcept;
+    bool isRunning() const noexcept;
 private:
     void waitAndSwapData() noexcept;
     void doWork() noexcept;

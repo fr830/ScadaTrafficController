@@ -1,5 +1,6 @@
 #include <memory>
 #include <string>
+#include <tuple>
 
 #include <iomanip> //todo: delete this include
 #include <iostream> //todo: delete this include
@@ -13,31 +14,10 @@
 #include <STC/FilteredIPv4Acceptor.hpp>
 #include <STC/IPv4Header.hpp>
 #include <STC/TCPAcceptor.hpp>
+#include <STC/ControllerAcceptor.hpp>
+#include <STC/Controller.hpp>
 
 #include <iphlpapi.h>
-
-
-
-
-class MyAccepter:
-        public stc::network::Acceptor
-{
-    std::string mName;
-public:
-    MyAccepter(std::string acceptor_name):
-        mName(acceptor_name)
-    {
-    }
-    void accept(std::byte const * ptr, uint32_t size) noexcept override
-    {
-        char const * data_begin = reinterpret_cast<char const *>(ptr);
-        char const * data_end = reinterpret_cast<char const *>(ptr) + size;
-        auto is_null = [](char b) { return !b; };
-        data_begin = std::find_if_not(data_begin, data_end, is_null);
-        data_end = std::find_if(data_begin, data_end, is_null);
-        (std::cout << "NEW PACKET FOR " << mName << ": \n" << std::string(data_begin, data_end) << "\n\n").flush();
-    }
-};
 
 
 
@@ -73,15 +53,21 @@ int main()
         std::cout << "catch" << std::endl;
     }*/
 
-    std::shared_ptr<stc::network::Acceptor> my_acceptor_dryer(std::make_shared<MyAccepter>("DRYER"));
-    std::shared_ptr<stc::network::Acceptor> my_acceptor_gener(std::make_shared<MyAccepter>("GENERATOR"));
+    std::shared_ptr<stc::Controller> controller =
+            std::make_shared<stc::Controller>();
 
-    std::shared_ptr<stc::network::Acceptor> tcp_acceptor_dryer(std::make_shared<::stc::network::TCPAcceptor>(my_acceptor_dryer));
-    std::shared_ptr<stc::network::Acceptor> tcp_acceptor_gener(std::make_shared<::stc::network::TCPAcceptor>(my_acceptor_gener));
+    std::shared_ptr<stc::network::Acceptor> my_acceptor_dryer =
+            std::make_shared<stc::ControllerAcceptor>(controller);
+
+    std::shared_ptr<stc::network::Acceptor> tcp_acceptor_dryer =
+            std::make_shared<::stc::network::TCPAcceptor>(my_acceptor_dryer);
 
     std::vector<stc::network::FilterIPv4Options> ip_filter_list{
-        stc::network::FilterIPv4Options(tcp_acceptor_dryer, "192.168.0.111", stc::network::FilterIPv4Options::Protocol::TCP),
-        stc::network::FilterIPv4Options(tcp_acceptor_gener, "192.168.0.112", stc::network::FilterIPv4Options::Protocol::TCP),
+        stc::network::FilterIPv4Options(
+                    tcp_acceptor_dryer,
+                    "192.168.0.111",
+                    stc::network::FilterIPv4Options::Protocol::TCP
+                    ),
     };
 
     stc::network::SnifferOptions opt;
@@ -95,6 +81,29 @@ int main()
     opt.setIP(inet_addr("192.168.0.110"));
 
     stc::network::Sniffer sniffer;
+
+    std::thread th(
+     [controller]() {
+        stc::Controller::ActualData data;
+        while (true) {
+            std::this_thread::yield();
+            controller->getActualData(data);
+            int x = 0;
+            for (auto & v: data) {
+                std::cout << "Packet " << x++ << " [";
+                for (auto & e: v) {
+                    if (!e.empty()) {
+                        std::cout << e << ' ';
+                    }
+                }
+                std::cout << "]\n\n";
+            }
+            std::cout << "\n\n";
+        }
+     }
+     );
+    th.detach();
+
     sniffer.start(opt);
 
     return EXIT_SUCCESS;

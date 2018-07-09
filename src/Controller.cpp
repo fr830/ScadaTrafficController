@@ -65,6 +65,16 @@ void parse_to_vector(
 }
 
 
+std::string::const_iterator get_packet_index(std::string::const_iterator begin,
+                                              std::string::const_iterator end,
+                                              unsigned & result)
+{
+    auto[packet_index_raw, index_begin, index_end] = parse_next(begin, end);
+    parse_next_int(index_begin, index_end, packet_index_raw);
+    result = static_cast<unsigned>(packet_index_raw /= 10);
+    return ++index_end;
+}
+
 }//internal linkage
 
 
@@ -74,14 +84,6 @@ namespace stc
 
 Controller::Controller()
 {
-    mData.resize(3);
-    for (auto & e: mData) {
-        e.resize(300);
-    }
-    mWorkedData.resize(3);
-    for (auto & e: mWorkedData) {
-        e.resize(300);
-    }
     mContinue = true;
     mWorkResult = std::async(std::launch::async, [this]() { this->doWork(); });
 }
@@ -105,17 +107,22 @@ void Controller::getActualData(Controller::ActualData & out_data) noexcept
     out_data.swap(mData);
 }
 
+bool Controller::isRunning() const noexcept
+{
+    return mContinue;
+}
+
 void Controller::waitAndSwapData() noexcept
 {
     mWorkedDataString.clear();
     while (mContinue) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(200));
         std::lock_guard lock_actual_data_string(mDataStringMutex);
         if (!mActualDataString.empty()) {
             mWorkedDataString.swap(mActualDataString);
             return;
         }
         //todo: добавить учет долгого отсутствия данных
-        std::this_thread::yield();
     }
 }
 
@@ -131,12 +138,10 @@ void Controller::doWork() noexcept
         auto current = mWorkedDataString.cbegin() + 1;
         auto end = mWorkedDataString.cend() - 1;
         try {
-            auto[packet_index_raw, index_begin, index_end] = parse_next(current, end);
-            parse_next_int(index_begin, index_end, packet_index_raw);
-            unsigned packet_index = static_cast<unsigned>(packet_index_raw /= 10);
+            unsigned packet_index;
+            current = get_packet_index(current, end, packet_index);
             if (packet_index >= mWorkedData.size()) {
                 mWorkedData.resize(packet_index + 1);
-                mWorkedData[packet_index].resize(300);
             }
             auto & vec = mWorkedData[packet_index];
             parse_to_vector(current, end, vec);
