@@ -18,8 +18,16 @@ void ControllerAcceptor::accept(std::byte const * ptr, uint32_t size) noexcept
     data_begin = std::find_if_not(data_begin, data_end, is_null);
     data_end = std::find_if(data_begin, data_end, is_null);
     if (data_begin != data_end) {
-        mActualData.assign(data_begin, data_end);
-        mController->setActualDataString(mActualData);//lock thread
+        if (*data_begin == '<' && *(data_end - 1) == '>') {
+            mActualData.assign(data_begin + 1, data_end - 1);
+            if (!mActualData.empty()) {
+                Event event;
+                event.mType = EventType::Update;
+                event.mData.emplace<std::string>(std::move(mActualData));
+                mController->getEventsPool()->pushEvent(std::move(event));
+            }
+        }
+
     }
 }
 

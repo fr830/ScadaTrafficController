@@ -3,6 +3,7 @@
 #include <STC/MultithreadQueue.hpp>
 #include <variant>
 #include <functional>
+#include <condition_variable>
 
 namespace stc
 {
@@ -19,7 +20,7 @@ struct Event
 {
     using Data = std::vector<std::vector<std::string>>;
     EventType mType;
-    std::variant<Data> mData;
+    std::variant<Data, std::string> mData;
 };
 
 
@@ -30,8 +31,12 @@ public:
     void pushEvent(Event && event);
     bool popEvent(Event & event);
     bool popEventIf(Event & event, std::function<bool(Event const &)> func);
+
+    void waitEvent(Event & event);
 private:
     core::MultithreadQueue<Event> mEventsPool;
+    std::condition_variable mCv;
+    std::mutex mCvMutex;
 };
 
 

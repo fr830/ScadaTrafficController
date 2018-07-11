@@ -5,6 +5,7 @@
 #include <tuple>
 #include <algorithm>
 
+
 namespace
 {
 
@@ -13,6 +14,7 @@ std::string::const_iterator parse_next_int(std::string::const_iterator begin,
                                            std::string::const_iterator end,
                                            int & result)
 {
+
     result = 0;
     while (begin != end && *begin >= '0' && *begin <='9') {
         result *= 10;
@@ -83,37 +85,40 @@ std::string::const_iterator get_packet_index(std::string::const_iterator begin,
 namespace stc
 {
 
-Controller::Controller(std::string const & name, std::string const & ip):
+Controller::Controller(std::shared_ptr<DataEventsPool> events_pool, std::string const & name, std::string const & ip):
+    mEventsPool(events_pool),
     mName(name),
     mIp(network::IPv4Converter(ip.c_str()))
 {
-    async_run();
+    if (!mEventsPool) {
+        throw std::logic_error("Events pool is null");
+    }
 }
 
-Controller::Controller(std::string const & name, uint32_t ip):
+Controller::Controller(std::shared_ptr<DataEventsPool> events_pool, std::string const & name, uint32_t ip):
+    mEventsPool(events_pool),
     mName(name),
     mIp(ip)
 {
-    async_run();
+    if (!mEventsPool) {
+        throw std::logic_error("Events pool is null");
+    }
 }
 
 Controller::~Controller()
 {
-    mContinue = false;
-    mWorkResult.get();
 }
 
-void Controller::setActualDataString(std::string & actual_string) noexcept
-{
-    std::lock_guard lock_actual_data_string(mDataStringMutex);
-    actual_string.swap(mActualDataString);
-    mTimeStamp = std::chrono::steady_clock::now();
-}
 
-void Controller::getActualData(Controller::ActualData & out_data) noexcept
+void Controller::getActualData(Controller::ActualData & out_data) const noexcept
 {
     std::lock_guard lock_data(mDataMutex);
     out_data = mData;
+}
+
+std::shared_ptr<DataEventsPool> Controller::getEventsPool() const noexcept
+{
+    return mEventsPool;
 }
 
 std::string const & Controller::getName() const noexcept
@@ -126,40 +131,11 @@ uint32_t Controller::getIp() const noexcept
     return mIp;
 }
 
-bool Controller::isRunning() const noexcept
-{
-    return mContinue;
-}
 
-void Controller::async_run()
-{
-    mContinue = true;
-    mWorkResult = std::async(std::launch::async, [this]() { this->doWork(); });
-}
-
-void Controller::waitAndSwapData() noexcept
-{
-    mWorkedDataString.clear();
-    while (mContinue) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
-        std::lock_guard lock_actual_data_string(mDataStringMutex);
-        if (!mActualDataString.empty()) {
-            mWorkedDataString.swap(mActualDataString);
-            return;
-        }
-        //todo: добавить учет долгого отсутствия данных
-    }
-}
-
-void Controller::doWork() noexcept
+/*void Controller::doWork() noexcept
 {
     while (mContinue) {
         waitAndSwapData();//блокирует поток до прихода данных
-        if (mWorkedDataString.front() != '<' ||
-            mWorkedDataString.back()  != '>'
-            ) {
-            continue;
-        }
         auto current = mWorkedDataString.cbegin() + 1;
         auto end = mWorkedDataString.cend() - 1;
 
@@ -180,6 +156,6 @@ void Controller::doWork() noexcept
             //todo: добавить в лог информацию о битом пакете
         }
     }
-}
+}*/
 
 }//namespace stc
