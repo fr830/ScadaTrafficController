@@ -1,4 +1,5 @@
 #include <STC/Controller.hpp>
+#include <STC/IPv4Converter.hpp>
 #include <cstring>
 #include <cstdio>
 #include <tuple>
@@ -82,10 +83,18 @@ std::string::const_iterator get_packet_index(std::string::const_iterator begin,
 namespace stc
 {
 
-Controller::Controller()
+Controller::Controller(std::string const & name, std::string const & ip):
+    mName(name),
+    mIp(network::IPv4Converter(ip.c_str()))
 {
-    mContinue = true;
-    mWorkResult = std::async(std::launch::async, [this]() { this->doWork(); });
+    async_run();
+}
+
+Controller::Controller(std::string const & name, uint32_t ip):
+    mName(name),
+    mIp(ip)
+{
+    async_run();
 }
 
 Controller::~Controller()
@@ -104,12 +113,28 @@ void Controller::setActualDataString(std::string & actual_string) noexcept
 void Controller::getActualData(Controller::ActualData & out_data) noexcept
 {
     std::lock_guard lock_data(mDataMutex);
-    out_data.swap(mData);
+    out_data = mData;
+}
+
+std::string const & Controller::getName() const noexcept
+{
+    return mName;
+}
+
+uint32_t Controller::getIp() const noexcept
+{
+    return mIp;
 }
 
 bool Controller::isRunning() const noexcept
 {
     return mContinue;
+}
+
+void Controller::async_run()
+{
+    mContinue = true;
+    mWorkResult = std::async(std::launch::async, [this]() { this->doWork(); });
 }
 
 void Controller::waitAndSwapData() noexcept
@@ -137,6 +162,7 @@ void Controller::doWork() noexcept
         }
         auto current = mWorkedDataString.cbegin() + 1;
         auto end = mWorkedDataString.cend() - 1;
+
         try {
             unsigned packet_index;
             current = get_packet_index(current, end, packet_index);

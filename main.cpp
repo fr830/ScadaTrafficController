@@ -4,6 +4,7 @@
 
 #include <iomanip> //todo: delete this include
 #include <iostream> //todo: delete this include
+#include <sstream> //todo: delete this include
 
 #include <thread>
 #include <STC/RawSocket.hpp>
@@ -18,6 +19,24 @@
 #include <STC/Controller.hpp>
 
 #include <iphlpapi.h>
+
+
+
+std::vector<stc::network::FilterIPv4Options>
+make_controllers_tcp_filter(std::vector<std::shared_ptr<stc::Controller>> & controllers)
+{
+    std::vector<stc::network::FilterIPv4Options> result;
+    for (auto & controller: controllers) {
+        result.emplace_back(
+            std::make_shared<::stc::network::TCPAcceptor>(
+                std::make_shared<stc::ControllerAcceptor>(controller)
+                ),
+            controller->getIp(),
+            stc::network::FilterIPv4Options::Protocol::TCP
+            );
+    }
+    return result;
+}
 
 
 
@@ -53,22 +72,12 @@ int main()
         std::cout << "catch" << std::endl;
     }*/
 
-    std::shared_ptr<stc::Controller> controller =
-            std::make_shared<stc::Controller>();
-
-    std::shared_ptr<stc::network::Acceptor> my_acceptor_dryer =
-            std::make_shared<stc::ControllerAcceptor>(controller);
-
-    std::shared_ptr<stc::network::Acceptor> tcp_acceptor_dryer =
-            std::make_shared<::stc::network::TCPAcceptor>(my_acceptor_dryer);
-
-    std::vector<stc::network::FilterIPv4Options> ip_filter_list{
-        stc::network::FilterIPv4Options(
-                    tcp_acceptor_dryer,
-                    "192.168.0.111",
-                    stc::network::FilterIPv4Options::Protocol::TCP
-                    ),
+    std::vector<std::shared_ptr<stc::Controller>> controllers{
+        std::make_shared<stc::Controller>("ft5p", "192.168.0.111"),
+        std::make_shared<stc::Controller>("srgm", "192.168.0.112")
     };
+
+    auto ip_filter_list =  make_controllers_tcp_filter(controllers);
 
     stc::network::SnifferOptions opt;
 
@@ -82,27 +91,40 @@ int main()
 
     stc::network::Sniffer sniffer;
 
-    std::thread th(
-     [controller]() {
+
+    auto worker = [](std::shared_ptr<stc::Controller> controller) {
+        std::stringstream ss;
         stc::Controller::ActualData data;
         while (true) {
             std::this_thread::yield();
             controller->getActualData(data);
             int x = 0;
+            ss << controller->getName() << " data accept\n";
             for (auto & v: data) {
-                std::cout << "Packet " << x++ << " [";
+                ss << " packet " << x++ << " [";
                 for (auto & e: v) {
                     if (!e.empty()) {
-                        std::cout << e << ' ';
+                        ss << e << ' ';
                     }
                 }
-                std::cout << "]\n\n";
+                ss << "]\n\n";
             }
-            std::cout << "\n\n";
+            ss << "\n\n";
+            std::cout << ss.str();
+            ss.clear();
+            ss.str("");
         }
-     }
-     );
-    th.detach();
+    };
+
+
+    std::vector<std::thread> threads;
+    threads.emplace_back(worker, controllers[0]);
+    threads.emplace_back(worker, controllers[1]);
+
+    for (auto & th: threads) {
+        th.detach();
+    }
+
 
     sniffer.start(opt);
 
