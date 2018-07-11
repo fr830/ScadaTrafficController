@@ -4,9 +4,12 @@
 #include <variant>
 #include <functional>
 #include <condition_variable>
+#include <memory>
 
 namespace stc
 {
+
+class Controller;
 
 
 enum class EventType
@@ -21,6 +24,7 @@ struct Event
     using Data = std::vector<std::vector<std::string>>;
     EventType mType;
     std::variant<Data, std::string> mData;
+    std::shared_ptr<Controller> mController;
 };
 
 
