@@ -31,17 +31,25 @@ public:
     StaticString(char const * str) noexcept:
         mSize(0)
     {
-        strcpy_s(mString.data(), mString.size(), str);
-        mSize = strlen(mString.data());
         mString[MaxSize] = '\0';
+        if (str != nullptr) {
+            mSize = strlen(str);
+            if (mSize > MaxSize) {
+                mSize = MaxSize;
+            }
+            memcpy(mString.data(), str, mSize);
+        }
+        mString[mSize] = '\0';
+        strcpy_s(mString.data(), mString.size(), str);
     }
 
-    StaticString(char const * str, char delim) noexcept:
-        mSize(0)
+    StaticString(char const * first, char const * last) noexcept:
+        mSize(static_cast<std::size_t>(last - first))
     {
-        while (mSize < MaxSize && *str && *str != delim ) {
-            mString[mSize++] = *str;
+        if (mSize > MaxSize) {
+            mSize = MaxSize;
         }
+        memcpy(mString.data(), first, mSize);
         mString[mSize] = '\0';
         mString[MaxSize] = '\0';
     }
