@@ -40,7 +40,6 @@ public:
             memcpy(mString.data(), str, mSize);
         }
         mString[mSize] = '\0';
-        strcpy_s(mString.data(), mString.size(), str);
     }
 
     StaticString(char const * first, char const * last) noexcept:
