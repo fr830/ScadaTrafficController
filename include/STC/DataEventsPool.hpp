@@ -15,16 +15,18 @@ class Controller;
 enum class EventType
 {
     Update,
-    UpdateTimeout
+    UpdateTimeout,
+    Close
 };
 
 
 struct Event
 {
     using Data = std::vector<std::vector<std::string>>;
+    using ETUpdate = std::pair<std::shared_ptr<Controller>, std::string>;
+    using ETUpdateTimeout = std::shared_ptr<Controller>;
     EventType mType;
-    std::variant<Data, std::string> mData;
-    std::shared_ptr<Controller> mController;
+    std::variant<Data, ETUpdate, ETUpdateTimeout> mData;
 };
 
 

@@ -17,6 +17,7 @@
 #include <STC/TCPAcceptor.hpp>
 #include <STC/ControllerAcceptor.hpp>
 #include <STC/Controller.hpp>
+#include <STC/DataEventsPool.hpp>
 
 #include <iphlpapi.h>
 
@@ -37,6 +38,7 @@ make_controllers_tcp_filter(std::vector<std::shared_ptr<stc::Controller>> & cont
     }
     return result;
 }
+
 
 
 
@@ -72,10 +74,42 @@ int main()
         std::cout << "catch" << std::endl;
     }*/
 
+    std::shared_ptr<stc::DataEventsPool> events_pool =
+            std::make_shared<stc::DataEventsPool>();
+
+
+
     std::vector<std::shared_ptr<stc::Controller>> controllers{
-        std::make_shared<stc::Controller>("ft5p", "192.168.0.111"),
-        std::make_shared<stc::Controller>("srgm", "192.168.0.112")
+        std::make_shared<stc::Controller>(events_pool, "ft5p", "192.168.0.111"),
+        std::make_shared<stc::Controller>(events_pool, "srgm", "192.168.0.112")
     };
+
+    std::thread worker(
+                [events_pool]() {
+                    stc::Event event;
+                    events_pool->waitEvent(event);
+                    while (event.mType != stc::EventType::Close) {
+                        bool has_event = true;
+                        while(has_event && event.mType != stc::EventType::Close) {
+                            has_event = events_pool->popEvent(event);
+
+                            switch (event.mType) {
+                            case stc::EventType::Update:
+                                std::cout << "Controller: ";
+                                std::cout << std::get<1>(event.mData).first->getName() << "\n";
+                                std::cout << std::get<1>(event.mData).second << "\n\n";
+                                break;
+                            default:
+                                std::cout << (int)event.mType << std::endl;
+                            }
+
+                        }
+                        events_pool->waitEvent(event);
+                    }
+                }
+        );
+    worker.detach();
+
 
     auto ip_filter_list =  make_controllers_tcp_filter(controllers);
 
@@ -90,41 +124,6 @@ int main()
     opt.setIP(inet_addr("192.168.0.110"));
 
     stc::network::Sniffer sniffer;
-
-
-    auto worker = [](std::shared_ptr<stc::Controller> controller) {
-        std::stringstream ss;
-        stc::Controller::ActualData data;
-        while (true) {
-            std::this_thread::yield();
-            controller->getActualData(data);
-            int x = 0;
-            ss << controller->getName() << " data accept\n";
-            for (auto & v: data) {
-                ss << " packet " << x++ << " [";
-                for (auto & e: v) {
-                    if (!e.empty()) {
-                        ss << e << ' ';
-                    }
-                }
-                ss << "]\n\n";
-            }
-            ss << "\n\n";
-            std::cout << ss.str();
-            ss.clear();
-            ss.str("");
-        }
-    };
-
-
-    std::vector<std::thread> threads;
-    threads.emplace_back(worker, controllers[0]);
-    threads.emplace_back(worker, controllers[1]);
-
-    for (auto & th: threads) {
-        th.detach();
-    }
-
 
     sniffer.start(opt);
 

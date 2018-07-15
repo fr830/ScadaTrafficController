@@ -66,7 +66,7 @@ private:
 
     std::lock_guard<std::mutex> getLock()
     {
-        return {mMutex};
+        return std::lock_guard<std::mutex>{mMutex};
     }
 
     template<typename ... Args>
@@ -78,7 +78,7 @@ private:
     bool usPop(T & old)
     {
         if (!usIsEmpty()) {
-            old = std::move(mQueue.top());
+            old = std::move(mQueue.front());
             mQueue.pop();
             return true;
         }
@@ -98,8 +98,8 @@ private:
     bool usPopIf(T & old, Function func)
     {
         if (!usIsEmpty()) {
-            if (func(mQueue.top())) {
-                old = std::move(mQueue.top());
+            if (func(mQueue.front())) {
+                old = std::move(mQueue.front());
                 mQueue.pop();
                 return true;
             }
@@ -110,7 +110,7 @@ private:
     template<typename Function>
     bool usPopIf(Function func)
     {
-        if (func(mQueue.top())) {
+        if (func(mQueue.front())) {
             usPop();
             return true;
         }
