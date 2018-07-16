@@ -35,7 +35,7 @@ make_controllers_tcp_filter(
             std::make_shared<::stc::network::TCPAcceptor>(
                 std::make_shared<stc::ControllerAcceptor>(
                             controller,
-                            std::move(events_pool)
+                            events_pool
                             )
                 ),
             controller->getIp(),
@@ -79,58 +79,62 @@ int main()
     } /*catch (...) {
         std::cout << "catch" << std::endl;
     }*/
+    try {
+        std::shared_ptr<stc::DataEventsPool> events_pool =
+                std::make_shared<stc::DataEventsPool>();
 
-    std::shared_ptr<stc::DataEventsPool> events_pool =
-            std::make_shared<stc::DataEventsPool>();
 
 
+        std::vector<std::shared_ptr<stc::Controller>> controllers{
+            std::make_shared<stc::Controller>("ft5p", "192.168.0.111"),
+            std::make_shared<stc::Controller>("srgm", "192.168.0.112")
+        };
 
-    std::vector<std::shared_ptr<stc::Controller>> controllers{
-        std::make_shared<stc::Controller>("ft5p", "192.168.0.111"),
-        std::make_shared<stc::Controller>("srgm", "192.168.0.112")
-    };
-
-    std::thread worker(
-                [events_pool]() {
-                    stc::Event event;
-                    events_pool->waitEvent(event);
-                    while (event.mType != stc::EventType::Close) {
-                        bool has_event = true;
-                        while(has_event && event.mType != stc::EventType::Close) {
-                            has_event = events_pool->popEvent(event);
-
-                            switch (event.mType) {
-                            case stc::EventType::Update:
-                                std::cout << "Controller: ";
-                                std::cout << std::get<1>(event.mData).first->getName() << "\n";
-                                std::cout << std::get<1>(event.mData).second << "\n\n";
-                                break;
-                            default:
-                                std::cout << (int)event.mType << std::endl;
-                            }
-
-                        }
+        std::thread worker(
+                    [events_pool]() {
+                        stc::Event event;
                         events_pool->waitEvent(event);
+                        while (event.mType != stc::EventType::Close) {
+                            bool has_event = true;
+                            while(has_event && event.mType != stc::EventType::Close) {
+                                has_event = events_pool->popEvent(event);
+
+                                switch (event.mType) {
+                                case stc::EventType::Update:
+                                    std::cout << "Controller: ";
+                                    std::cout << event.mData.first->getName() << "\n";
+                                    std::cout << event.mData.second << "\n\n";
+                                    break;
+                                default:
+                                    std::cout << (int)event.mType << std::endl;
+                                }
+
+                            }
+                            events_pool->waitEvent(event);
+                        }
                     }
-                }
+            );
+        worker.detach();
+
+        auto ip_filter_list =  make_controllers_tcp_filter(controllers, events_pool);
+
+        stc::network::SnifferOptions opt;
+
+        opt.setAcceptor(
+                    std::make_shared<stc::network::FilteredIPv4Acceptor>(
+                        std::move(ip_filter_list)
+                        )
         );
-    worker.detach();
 
-    auto ip_filter_list =  make_controllers_tcp_filter(controllers, events_pool);
+        opt.setIP(inet_addr("192.168.0.110"));
 
-    stc::network::SnifferOptions opt;
+        stc::network::Sniffer sniffer;
 
-    opt.setAcceptor(
-                std::make_shared<stc::network::FilteredIPv4Acceptor>(
-                    std::move(ip_filter_list)
-                    )
-    );
+        sniffer.start(opt);
+    } catch (...) {
+        std::cout << "unknown error" << std::endl;
+    }
 
-    opt.setIP(inet_addr("192.168.0.110"));
-
-    stc::network::Sniffer sniffer;
-
-    sniffer.start(opt);
 
     return EXIT_SUCCESS;
 }

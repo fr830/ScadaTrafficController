@@ -27,12 +27,6 @@ Controller::~Controller()
 }
 
 
-void Controller::getActualData(Controller::ActualData & out_data) const noexcept
-{
-    std::lock_guard lock_data(mDataMutex);
-    out_data = mData;
-}
-
 std::string const & Controller::getName() const noexcept
 {
     return mName;

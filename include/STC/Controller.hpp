@@ -18,14 +18,11 @@ public:
     Controller(std::string const & name, std::string const & ip);
     Controller(std::string const & name, uint32_t ip);
     ~Controller();
-    void getActualData(ActualData & out_data) const noexcept;
     std::string const & getName() const noexcept;
     uint32_t getIp() const noexcept;
 private:
     std::string mName;
     uint32_t mIp;
-    ActualData mData;
-    mutable std::mutex mDataMutex;
 };
 
 

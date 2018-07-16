@@ -18,7 +18,7 @@ template<typename T>
 class MultithreadQueue
 {
 public:
-    bool isEmpty() const noexcept
+    bool isEmpty() noexcept
     {
         auto locker = getLock();
         return usIsEmpty();
@@ -58,7 +58,7 @@ public:
     }
 
 private:
-    bool usIsEmpty() const noexcept
+    bool usIsEmpty() noexcept
     {
         return mQueue.empty();
     }
@@ -118,7 +118,7 @@ private:
     }
 
     std::queue<T> mQueue;
-    mutable std::mutex mMutex;
+    std::mutex mMutex;
 };
 
 

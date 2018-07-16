@@ -1,6 +1,7 @@
 #ifndef INCLUDE_STC_DATAEVENTSPOOL_HPP
 #define INCLUDE_STC_DATAEVENTSPOOL_HPP
 #include <STC/MultithreadQueue.hpp>
+#include <STC/Controller.hpp>
 #include <variant>
 #include <functional>
 #include <condition_variable>
@@ -9,7 +10,7 @@
 namespace stc
 {
 
-class Controller;
+//class Controller;
 
 
 enum class EventType
@@ -22,11 +23,10 @@ enum class EventType
 
 struct Event
 {
-    using Data = std::vector<std::vector<std::string>>;
     using ETUpdate = std::pair<std::shared_ptr<Controller>, std::string>;
     using ETUpdateTimeout = std::shared_ptr<Controller>;
     EventType mType;
-    std::variant<Data, ETUpdate, ETUpdateTimeout> mData;
+    ETUpdate mData;
 };
 
 

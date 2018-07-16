@@ -27,9 +27,7 @@ void ControllerAcceptor::accept(std::byte const * ptr, uint32_t size) noexcept
             if (!mActualData.empty()) {
                 Event event;
                 event.mType = EventType::Update;
-                event.mData.emplace<Event::ETUpdate>(
-                    std::make_pair(mController, mActualData)
-                    );
+                event.mData = std::make_pair(mController, mActualData);
                 mEventsPool->pushEvent(std::move(event));
             }
         }

@@ -7,12 +7,14 @@ namespace stc
 void DataEventsPool::pushEvent(Event & event)
 {
     mEventsPool.emplace(event);
+    std::unique_lock<std::mutex> locker(mCvMutex);
     mCv.notify_one();
 }
 
 void DataEventsPool::pushEvent(Event && event)
 {
     mEventsPool.emplace(std::move(event));
+    std::unique_lock<std::mutex> locker(mCvMutex);
     mCv.notify_one();
 }
 
