@@ -1,12 +1,14 @@
 #include <STC/DataPacket.hpp>
 #include <tuple>
 #include <algorithm>
-#include <type_traits>
+#include <cstdlib>
 
 namespace
 {
 
-
+//parse 123#some; fragment
+//first - index (123)
+//second, third - pointer to data ->some<-
 std::tuple<unsigned long, char const *, char const *>
 getTokenInfo (char const * begin, char const * end)
 {
@@ -45,6 +47,7 @@ DataPacket::DataPacket(uint32_t index, DataContainer data) noexcept:
     mPacket(std::move(data)),
     mIndex(index)
 {
+    mPacket.reserve(300);//300 строк хватит кому угодно на любой пакет :)
 }
 
 DataPacket::DataContainer const & DataPacket::getData() const noexcept

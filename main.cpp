@@ -24,13 +24,19 @@
 
 
 std::vector<stc::network::FilterIPv4Options>
-make_controllers_tcp_filter(std::vector<std::shared_ptr<stc::Controller>> & controllers)
+make_controllers_tcp_filter(
+        std::vector<std::shared_ptr<stc::Controller>> & controllers,
+        std::shared_ptr<stc::DataEventsPool> events_pool
+        )
 {
     std::vector<stc::network::FilterIPv4Options> result;
     for (auto & controller: controllers) {
         result.emplace_back(
             std::make_shared<::stc::network::TCPAcceptor>(
-                std::make_shared<stc::ControllerAcceptor>(controller)
+                std::make_shared<stc::ControllerAcceptor>(
+                            controller,
+                            std::move(events_pool)
+                            )
                 ),
             controller->getIp(),
             stc::network::FilterIPv4Options::Protocol::TCP
@@ -80,8 +86,8 @@ int main()
 
 
     std::vector<std::shared_ptr<stc::Controller>> controllers{
-        std::make_shared<stc::Controller>(events_pool, "ft5p", "192.168.0.111"),
-        std::make_shared<stc::Controller>(events_pool, "srgm", "192.168.0.112")
+        std::make_shared<stc::Controller>("ft5p", "192.168.0.111"),
+        std::make_shared<stc::Controller>("srgm", "192.168.0.112")
     };
 
     std::thread worker(
@@ -110,8 +116,7 @@ int main()
         );
     worker.detach();
 
-
-    auto ip_filter_list =  make_controllers_tcp_filter(controllers);
+    auto ip_filter_list =  make_controllers_tcp_filter(controllers, events_pool);
 
     stc::network::SnifferOptions opt;
 

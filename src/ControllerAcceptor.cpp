@@ -5,7 +5,11 @@
 namespace stc
 {
 
-ControllerAcceptor::ControllerAcceptor(std::shared_ptr<Controller> controller):
+ControllerAcceptor::ControllerAcceptor(
+        std::shared_ptr<Controller> controller,
+        std::shared_ptr<stc::DataEventsPool> events_pool
+        ):
+    mEventsPool(std::move(events_pool)),
     mController(std::move(controller))
 {
 }
@@ -26,7 +30,7 @@ void ControllerAcceptor::accept(std::byte const * ptr, uint32_t size) noexcept
                 event.mData.emplace<Event::ETUpdate>(
                     std::make_pair(mController, mActualData)
                     );
-                mController->getEventsPool()->pushEvent(std::move(event));
+                mEventsPool->pushEvent(std::move(event));
             }
         }
     }

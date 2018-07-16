@@ -10,24 +10,16 @@
 namespace stc
 {
 
-Controller::Controller(std::shared_ptr<DataEventsPool> events_pool, std::string const & name, std::string const & ip):
-    mEventsPool(events_pool),
+Controller::Controller(std::string const & name, std::string const & ip):
     mName(name),
     mIp(network::IPv4Converter(ip.c_str()))
 {
-    if (!mEventsPool) {
-        throw std::logic_error("Events pool is null");
-    }
 }
 
-Controller::Controller(std::shared_ptr<DataEventsPool> events_pool, std::string const & name, uint32_t ip):
-    mEventsPool(events_pool),
+Controller::Controller(std::string const & name, uint32_t ip):
     mName(name),
     mIp(ip)
 {
-    if (!mEventsPool) {
-        throw std::logic_error("Events pool is null");
-    }
 }
 
 Controller::~Controller()
@@ -39,11 +31,6 @@ void Controller::getActualData(Controller::ActualData & out_data) const noexcept
 {
     std::lock_guard lock_data(mDataMutex);
     out_data = mData;
-}
-
-std::shared_ptr<DataEventsPool> Controller::getEventsPool() const noexcept
-{
-    return mEventsPool;
 }
 
 std::string const & Controller::getName() const noexcept
