@@ -26,7 +26,7 @@ struct Event
     using ETUpdate = std::pair<std::shared_ptr<Controller>, std::string>;
     using ETUpdateTimeout = std::shared_ptr<Controller>;
     EventType mType;
-    ETUpdate mData;
+    std::variant<ETUpdate, ETUpdateTimeout> mData;
 };
 
 

@@ -10,7 +10,6 @@ namespace stc
 
 class DataPacket
 {
-
 public:
     using DataString = stc::core::StaticString<7>;//8 bytes - 7 + '\0'
     using DataContainer = std::vector<DataString>;

@@ -18,6 +18,7 @@
 #include <STC/ControllerAcceptor.hpp>
 #include <STC/Controller.hpp>
 #include <STC/DataEventsPool.hpp>
+#include <STC/DataHandler.hpp>
 
 #include <iphlpapi.h>
 
@@ -90,30 +91,7 @@ int main()
             std::make_shared<stc::Controller>("srgm", "192.168.0.112")
         };
 
-        std::thread worker(
-                    [events_pool]() {
-                        stc::Event event;
-                        events_pool->waitEvent(event);
-                        while (event.mType != stc::EventType::Close) {
-                            bool has_event = true;
-                            while(has_event && event.mType != stc::EventType::Close) {
-                                has_event = events_pool->popEvent(event);
-
-                                switch (event.mType) {
-                                case stc::EventType::Update:
-                                    std::cout << "Controller: ";
-                                    std::cout << event.mData.first->getName() << "\n";
-                                    std::cout << event.mData.second << "\n\n";
-                                    break;
-                                default:
-                                    std::cout << (int)event.mType << std::endl;
-                                }
-
-                            }
-                            events_pool->waitEvent(event);
-                        }
-                    }
-            );
+        std::thread worker(stc::data_event_handler, events_pool);
         worker.detach();
 
         auto ip_filter_list =  make_controllers_tcp_filter(controllers, events_pool);
