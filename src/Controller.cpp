@@ -12,13 +12,17 @@ namespace stc
 
 Controller::Controller(std::string const & name, std::string const & ip):
     mName(name),
-    mIp(network::IPv4Converter(ip.c_str()))
+    mIp(network::IPv4Converter(ip.c_str())),
+    mSignal(true),
+    mLastUpdate(TimeClock::now())
 {
 }
 
 Controller::Controller(std::string const & name, uint32_t ip):
     mName(name),
-    mIp(ip)
+    mIp(ip),
+    mSignal(true),
+    mLastUpdate(TimeClock::now())
 {
 }
 
@@ -37,31 +41,62 @@ uint32_t Controller::getIp() const noexcept
     return mIp;
 }
 
-
-/*void Controller::doWork() noexcept
+void Controller::setActualPacket(DataPacket & packet)
 {
-    while (mContinue) {
-        waitAndSwapData();//блокирует поток до прихода данных
-        auto current = mWorkedDataString.cbegin() + 1;
-        auto end = mWorkedDataString.cend() - 1;
+    if (!packet.isValid()) {
+        return;
+    }
+    size_t vec_index = packet.getIndex() / 10;
+    std::lock_guard<std::mutex> locker(mDataMutex);
 
-        try {
-            unsigned packet_index;
-            current = get_packet_index(current, end, packet_index);
-            if (packet_index >= mWorkedData.size()) {
-                mWorkedData.resize(packet_index + 1);
-            }
-            auto & vec = mWorkedData[packet_index];
-            parse_to_vector(current, end, vec);
-            std::lock_guard lock_data(mDataMutex);
-            if (packet_index >= mData.size()) {
-                mData.resize(packet_index + 1);
-            }
-            mData[packet_index].swap(vec);
-        } catch (...) {
-            //todo: добавить в лог информацию о битом пакете
+    if (vec_index >= mData.size()) {
+        mData.resize(vec_index + 1);
+    }
+    mData[vec_index].swap(packet);
+    mLastUpdate = TimeClock::now();
+}
+
+void Controller::setSignalState(bool state) noexcept
+{
+    mSignal = state;
+}
+
+bool Controller::isConnected() const noexcept
+{
+    return mSignal;
+}
+
+Controller::TimePoint Controller::getLastUpdate() const noexcept
+{
+    return mLastUpdate;
+}
+
+
+
+void Controller::getParameters(
+        PackRequest const & param_info,
+        PackResult & result
+        ) const noexcept
+{
+    if (param_info.empty()) {
+        return;
+    }
+    result.clear();
+    result.reserve(param_info.size());
+    std::lock_guard<std::mutex> locker(mDataMutex);
+    for (auto [pac_index, val_index]: param_info) {
+        uint32_t vec_index = pac_index / 10;
+        if (vec_index < mData.size() &&
+            val_index < mData[vec_index].getData().size()
+            ) {
+            result.emplace_back(pac_index,
+                                val_index,
+                                mData[vec_index].getData()[val_index]
+                                );
         }
     }
-}*/
+}
+
+
 
 }//namespace stc

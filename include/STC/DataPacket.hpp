@@ -13,13 +13,17 @@ class DataPacket
 public:
     using DataString = stc::core::StaticString<7>;//8 bytes - 7 + '\0'
     using DataContainer = std::vector<DataString>;
-    DataPacket(uint32_t index, DataContainer data = DataContainer()) noexcept;
+    DataPacket(uint32_t index = invalid_index, DataContainer data = DataContainer()) noexcept;
     DataContainer const & getData() const noexcept;
     void setData(DataContainer data) noexcept;
     uint32_t getIndex() const noexcept;
-
+    bool isValid() const noexcept;
     bool parseFromString(std::string const & str);
+    void swap(DataPacket & src) noexcept;
+
+    constexpr static uint32_t invalid_index = std::numeric_limits<uint32_t>::max();
 private:
+
     DataContainer mPacket;
     uint32_t mIndex;
 };

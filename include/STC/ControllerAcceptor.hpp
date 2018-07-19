@@ -20,6 +20,7 @@ public:
                        std::shared_ptr<stc::DataEventsPool> events_pool
                        );
     void accept(std::byte const * ptr, uint32_t size) noexcept override;
+    void timeout() noexcept override;
 private:
     std::shared_ptr<stc::DataEventsPool> mEventsPool;
     std::shared_ptr<Controller> mController;

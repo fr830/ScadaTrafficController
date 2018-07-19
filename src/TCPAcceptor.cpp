@@ -36,6 +36,11 @@ void TCPAcceptor::accept(std::byte const * ptr, uint32_t size) noexcept
     }
 }
 
+void TCPAcceptor::timeout() noexcept
+{
+    mAcceptor->timeout();
+}
+
 void TCPAcceptor::resetPacketData() noexcept
 {
     mData.clear();

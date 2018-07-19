@@ -19,6 +19,8 @@
 #include <STC/Controller.hpp>
 #include <STC/DataEventsPool.hpp>
 #include <STC/DataHandler.hpp>
+#include <STC/Acceptor.hpp>
+#include <map>
 
 #include <iphlpapi.h>
 
@@ -40,9 +42,14 @@ make_controllers_tcp_filter(
                             )
                 ),
             controller->getIp(),
-            stc::network::FilterIPv4Options::Protocol::TCP
+            stc::network::FilterIPv4Options::Protocol::TCP,
+            std::chrono::duration_cast<stc::network::Acceptor::Duration> (
+                std::chrono::milliseconds(1000)
+                )
             );
+
     }
+
     return result;
 }
 
@@ -103,6 +110,42 @@ int main()
                         std::move(ip_filter_list)
                         )
         );
+
+
+        std::thread serv_th([controllers]() {
+            stc::Controller::PackRequest req {
+                std::make_pair<uint32_t, uint32_t>(10, 3),
+                std::make_pair<uint32_t, uint32_t>(0, 158),
+                std::make_pair<uint32_t, uint32_t>(0, 19),
+            };
+            std::map<std::pair<uint32_t, uint32_t>, std::string> m {
+                {std::make_pair<uint32_t, uint32_t>(10, 3), "gen t"},
+                {std::make_pair<uint32_t, uint32_t>(0, 158), "out t"},
+                {std::make_pair<uint32_t, uint32_t>(0, 19), "speed"}
+            };
+            stc::Controller::PackResult res;
+            std::string message;
+            message.reserve(300);
+            while (true) {
+                controllers[0]->getParameters(req, res);
+                std::cout << "connected: " << controllers[0]->isConnected() << '\n';
+                for (auto & [pac_index, val_index, data]: res) {
+                    auto it = m.find(std::make_pair(pac_index, val_index));
+                    if (it != m.end()) {
+                        std::cout << it->second << ": " << data.c_str() << '\n';
+                    } else {
+                        std::cout << "unknown (" << pac_index << ", " << val_index << "): " << data.c_str() << '\n';
+                    }
+                }
+                std::cout << std::endl;
+
+                std::this_thread::sleep_for(std::chrono::milliseconds(50));
+                system("cls");
+            }
+
+        });
+        serv_th.detach();
+
 
         opt.setIP(inet_addr("192.168.0.110"));
 

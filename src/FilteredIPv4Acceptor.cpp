@@ -24,7 +24,7 @@ void FilteredIPv4Acceptor::accept(std::byte const * ptr, uint32_t size) noexcept
         ) {
         return;
     }
-    for (auto option: mOptions) {
+    for (auto & option: mOptions) {
         if (option.ip() == ip_header->mSourceIP &&
             option.protocol() == ip_header->mProtocol
         ) {
@@ -33,6 +33,23 @@ void FilteredIPv4Acceptor::accept(std::byte const * ptr, uint32_t size) noexcept
                         ptr + size_ip_headers,
                         size - size_ip_headers
                         );
+            option.setLastUpdate(TimeClock::now());
+        }
+    }
+
+    for (auto & option: mOptions) {
+        if (option.duration() < (TimeClock::now() - option.lastUpdate())) {
+            option.acceptor()->timeout();
+        }
+    }
+}
+
+
+void FilteredIPv4Acceptor::timeout() noexcept
+{
+    for (auto & option: mOptions) {
+        if (option.duration() < (TimeClock::now() - option.lastUpdate())) {
+            option.acceptor()->timeout();
         }
     }
 }
@@ -41,11 +58,14 @@ void FilteredIPv4Acceptor::accept(std::byte const * ptr, uint32_t size) noexcept
 
 FilterIPv4Options::FilterIPv4Options(
         std::shared_ptr<Acceptor> acceptor,
-        IPv4Converter ip, Protocol protocol
+        IPv4Converter ip, Protocol protocol,
+        Acceptor::Duration signal_timeout
         ):
     mAcceptor(std::move(acceptor)),
     mIP(ip),
-    mProtocol(protocol)
+    mProtocol(protocol),
+    mDuration(signal_timeout),
+    mLastUpdate(Acceptor::TimeClock::now())
 {
 }
 
@@ -65,7 +85,21 @@ FilterIPv4Options::Protocol FilterIPv4Options::protocol() const noexcept
     return mProtocol;
 }
 
+Acceptor::Duration FilterIPv4Options::duration() const noexcept
+{
+    return mDuration;
+}
 
+
+Acceptor::TimePoint FilterIPv4Options::lastUpdate() const noexcept
+{
+    return mLastUpdate;
+}
+
+void FilterIPv4Options::setLastUpdate(Acceptor::TimePoint tp) noexcept
+{
+    mLastUpdate = tp;
+}
 
 
 

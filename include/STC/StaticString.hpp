@@ -65,7 +65,7 @@ public:
 
     char const * c_str() const noexcept
     {
-        return mString;
+        return mString.data();
     }
 
     std::pair<long, Iterator> toLong(int radix = 10) const noexcept

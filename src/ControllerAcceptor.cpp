@@ -34,4 +34,13 @@ void ControllerAcceptor::accept(std::byte const * ptr, uint32_t size) noexcept
     }
 }
 
+void ControllerAcceptor::timeout() noexcept
+{
+    Event event;
+    event.mType = EventType::UpdateTimeout;
+    event.mData = mController;
+    mEventsPool->pushEvent(std::move(event));
+}
+
+
 }//namespace stc

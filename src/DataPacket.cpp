@@ -55,6 +55,7 @@ DataPacket::DataContainer const & DataPacket::getData() const noexcept
     return mPacket;
 }
 
+
 void DataPacket::setData(DataContainer data) noexcept
 {
     mPacket = std::move(data);
@@ -65,38 +66,73 @@ uint32_t DataPacket::getIndex() const noexcept
     return mIndex;
 }
 
+bool DataPacket::isValid() const noexcept
+{
+    return mIndex != invalid_index;
+}
+
 bool DataPacket::parseFromString(std::string const & str)
 {
     if (str.empty()) {
         return false;
     }
-
-    char const * begin = str.data();
-    char const * end = str.data() + str.size();
-    {
-        [[maybe_unused]]
-        auto[packet_index, unused_begin, token_end] = getTokenInfo(begin, end);
-        begin = token_end + 1;
-        mIndex = packet_index;
-    }
-    mPacket.clear();
-    while (begin != end) {
-        auto[val_index, token_begin, token_end] = getTokenInfo(begin, end);
-
-        if (val_index == mPacket.size()) {
-            mPacket.emplace_back(token_begin, token_end);
-        } else {
-            if (val_index > mPacket.size()) {
-                mPacket.reserve(val_index + 10);
-                mPacket.resize(val_index + 1);
+    uint32_t temporaryIndex = invalid_index;
+    try {
+        char const * begin = str.data();
+        char const * end = str.data() + str.size();
+        {
+            [[maybe_unused]]
+            auto[index, token_begin, token_end] = getTokenInfo(begin, end);
+            begin = token_end + 1;
+            if (index != 0) {
+                return false;
             }
-            mPacket.emplace(mPacket.begin() + static_cast<ptrdiff_t>(val_index),
-                            token_begin,
-                            token_end
-                            );
+            char * num_end;
+            unsigned long packet_index = strtoul(token_begin, &num_end, 10);
+            if (num_end != token_end) {
+                return false;
+            }
+            temporaryIndex = packet_index;
         }
-        begin = token_end + 1;
+
+        mIndex = invalid_index;
+        mPacket.clear();
+
+        while (begin != end) {
+            auto[val_index, token_begin, token_end] = getTokenInfo(begin, end);
+
+            if (val_index == mPacket.size()) {
+                mPacket.emplace_back(token_begin, token_end);
+            } else {
+                if (val_index > mPacket.size()) {
+                    mPacket.reserve(val_index + 10);
+                    mPacket.resize(val_index + 1);
+                }
+                mPacket.emplace(mPacket.begin() + static_cast<ptrdiff_t>(val_index),
+                                token_begin,
+                                token_end
+                                );
+            }
+            begin = token_end + 1;
+        }
+        mIndex = temporaryIndex;
+    } catch (...) {
+        mIndex = invalid_index;
+        mPacket.clear();
+        //todo: add other exception handlers
+        return false;
     }
+
+    return true;
+}
+
+void DataPacket::swap(DataPacket & src) noexcept
+{
+    if (this != &src) {
+        std::swap(mIndex, src.mIndex);
+        mPacket.swap(src.mPacket);
+    }
+
 }
 
 

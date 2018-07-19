@@ -44,7 +44,7 @@ RawSocket::RawSocket(uint32_t ip, int protocol):
     }
 
     setReuse(true);
-    setTimeout(1000 * 3);
+    setTimeout(1000 * 1);
     unsigned long flag = 1;
 
     if (ioctlsocket(mSocket, static_cast<long>(SIO_RCVALL), &flag)) {

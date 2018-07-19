@@ -50,7 +50,7 @@ bool Sniffer::start(SnifferOptions options)
                 }
 
                 if (recv_result == SOCKET_ERROR) {
-                    //todo: log
+                    acceptor->timeout();
                     break;
                 }
 

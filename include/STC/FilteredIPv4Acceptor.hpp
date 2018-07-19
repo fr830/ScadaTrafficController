@@ -23,7 +23,8 @@ public:
         TCP = 0x06
     };
     FilterIPv4Options(std::shared_ptr<Acceptor> acceptor,
-                      IPv4Converter ip, Protocol protocol
+                      IPv4Converter ip, Protocol protocol,
+                      Acceptor::Duration max_timeout
                       );
     FilterIPv4Options(FilterIPv4Options const &) = default;
     FilterIPv4Options(FilterIPv4Options &&) noexcept = default;
@@ -32,10 +33,15 @@ public:
     std::shared_ptr<Acceptor> const & acceptor() const noexcept;
     uint32_t ip() const noexcept;
     Protocol protocol() const noexcept;
+    Acceptor::Duration duration() const noexcept;
+    Acceptor::TimePoint lastUpdate() const noexcept;
+    void setLastUpdate(Acceptor::TimePoint tp) noexcept;
 private:
     std::shared_ptr<Acceptor> mAcceptor;
     uint32_t mIP;
     Protocol mProtocol;
+    Acceptor::Duration mDuration;
+    Acceptor::TimePoint mLastUpdate;
 };
 
 
@@ -68,6 +74,7 @@ class FilteredIPv4Acceptor:
 public:
     FilteredIPv4Acceptor(std::vector<FilterIPv4Options> options);
     void accept(std::byte const * ptr, uint32_t size) noexcept override;
+    void timeout() noexcept override;
 private:
     std::vector<FilterIPv4Options> mOptions;
 };

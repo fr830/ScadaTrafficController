@@ -21,6 +21,7 @@ class TCPAcceptor:
 public:
     TCPAcceptor(std::shared_ptr<Acceptor> acceptor);
     void accept(std::byte const * ptr, uint32_t size) noexcept override;
+    void timeout() noexcept override;
 private:
     void resetPacketData() noexcept;
     std::vector<std::byte> mData;
